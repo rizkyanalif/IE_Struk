@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Hasil Ekstraksi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 60%;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1e40af;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: transparent;
+            color: #dc2626 !important;
+            border: 1px solid #dc2626;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .back-button:hover {
+            background-color: #fef2f2;
+        }
+
+        textarea {
+            width: 100%;
+            height: 250px;
+            margin-top: 20px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .ktp {
+            position: sticky;
+            top: 10px;
+        }
+
+        .navigation-grid {
+            position: fixed;
+            right: 20px;
+            top: 40px;
+            width: 200px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .navigation-grid h3 {
+            font-size: 16px;
+            margin-top: 0;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            /* Membuat 3 kolom seperti gambar Anda */
+            gap: 8px;
+        }
+
+        .grid-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f4f8;
+            color: #2563eb;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .grid-item:hover {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .grid-item.active {
+            background: #2563eb;
+            color: white;
+            border: 2px solid #166534;
+        }
+
+        .grid-item.submitted {
+            background: #22c55e;
+            color: white;
+        }
+
+        .nav-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        /* Ukuran tombol panah agar kotak */
+        .btn-arrow {
+            width: 50px !important;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px !important;
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: bold;
+        }
+
+        .btn-arrow:hover {
+            background-color: #e2e8f0;
+            color: #1e293b;
+            border-color: #cbd5e1;
+        }
+
+        /* Tombol submit di tengah */
+        .btn-submit-main {
+            background-color: #22c55e;
+            width: 200px !important;
+            height: 50px;
+        }
+
+        .btn-submit-main:hover {
+            background-color: #166534;
+        }
+
+        .nav-controls a {
+            text-decoration: none !important;
+        }
+
+        /* Penyesuaian agar container utama tidak tertutup grid di layar kecil */
+        @media (max-width: 1200px) {
+            .container {
+                margin-left: 20px;
+                max-width: 70%;
+            }
+        }
+    </style>
+</head>
+
+<script>
+    function tambahBaris() {
+        // Ambil elemen tbody berdasarkan ID
+        const tbody = document.getElementById('tabel-item');
+
+        // #30b35c  // Buat element baris baru (tr)
+        const row = document.createElement('tr');
+
+        // Masukkan struktur input ke dalam baris baru tersebut
+        row.innerHTML = `
+                <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                    <input type="text" name="item_name[]" value="" style="padding: 6px;" placeholder="Nama produk baru...">
+                </td>
+                <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                    <input type="number" name="item_price[]" value="0" style="padding: 6px;">
+                </td>
+                <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                    <input type="number" name="item_qty[]" value="1" style="padding: 6px;">
+                </td>
+                <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                    <input type="number" name="item_subtotal[]" value="0" style="padding: 6px;">
+                </td>
+                <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">
+                    <button type="button" onclick="hapusBaris(this)" style="background: #dc2626; padding: 6px 10px; width: auto; font-size: 12px;">X</button>
+                </td>
+            `;
+
+        // Masukkan baris baru ke dalam tabel
+        tbody.appendChild(row);
+    }
+
+    function hapusBaris(button) {
+        // button.parentElement adalah <td>, dan parentElement-nya lagi adalah <tr>
+        const row = button.parentElement.parentElement;
+
+        // Berikan konfirmasi singkat sebelum menghapus baris demi keamanan data
+        if (confirm("Apakah Anda yakin ingin menghapus item ini?")) {
+            row.remove();
+        }
+    }
+</script>
+
+<body>
+
+    <div class="navigation-grid">
+        <h3>Daftar Dokumen</h3>
+        <div class="grid-container">
+            {% for idx in range(total) %}
+            <a href="{{ url_for('viewer', i=idx) }}"
+                class="grid-item {% if data_list[idx].submitted %} submitted{% endif %}{% if idx == i %} active{% endif %}">
+                {{ idx + 1 }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="container">
+
+        <a href="{{ url_for('index') }}" class="back-button"
+            onclick="return confirm('Apakah Anda yakin ingin kembali? Data yang belum disubmit akan hilang.')">
+            &lt; Exit
+        </a>
+
+        <h2>Hasil Ekstraksi Data</h2>
+        <h2>{{ img.file_name }} ({{i+1}}/{{total}})</h2>
+
+        <!-- <img src="data:image/png;base64,{{ img.img }}" width="400" class="ktp"> -->
+
+        <form method="POST" , action="/submit_folder">
+
+            <input type="hidden" name="index" value="{{ i }}">
+
+            {% for key, value in img.data.items() if 'raw' not in key %}
+
+            {% if key == 'item' and value is iterable and value is not string %}
+            <br>
+            <label><strong>Daftar Item Belanjaan:</strong></label>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+                <thead>
+                    <tr style="background-color: #cbd5e1; text-align: left;">
+                        <th style="padding: 8px; border: 1px solid #cbd5e1;">Nama Item</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; width: 15%;">Harga</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; width: 10%;">Qty</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; width: 15%;">Subtotal</th>
+                        <th style="padding: 8px; border: 1px solid #cbd5e1; width: 8%; text-align: center;">Aksi</th>
+                    </tr>
+                </thead>
+                <!-- Diberi ID agar bisa dimanipulasi oleh JavaScript -->
+                <tbody id="tabel-item">
+                    {% for produk in value %}
+                    <tr>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                            <input type="text" name="item_name[]" value="{{ produk.item_name }}" style="padding: 6px;">
+                        </td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                            <input type="number" name="item_price[]" value="{{ produk.item_price }}"
+                                style="padding: 6px;">
+                        </td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                            <input type="number" name="item_qty[]" value="{{ produk.quantity }}" style="padding: 6px;">
+                        </td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1;">
+                            <input type="number" name="item_subtotal[]" value="{{ produk.subtotal }}"
+                                style="padding: 6px;">
+                        </td>
+                        <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">
+                            <!-- Tombol Hapus Baris -->
+                            <button type="button" onclick="hapusBaris(this)"
+                                style="background: #dc2626; padding: 6px 10px; width: auto; font-size: 12px;">X</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <!-- Bagian Bawah Tabel untuk Tombol Tambah Baris -->
+                <tfoot>
+                    <tr>
+                        <td colspan="5" style="padding: 10px 0;">
+                            <button type="button" onclick="tambahBaris()"
+                                style="background: #10b981; width: auto; padding: 8px 15px; font-weight: bold;">+ Tambah
+                                Item</button>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            {# JIKA DATA BIASA (String / Angka) #}
+            {% else %}
+            <label>{{ labels[key] }}:</label><br>
+            <input type="text" value="{{ value }}" name="{{ key }}">
+            <br><br>
+            {% endif %}
+
+            {% endfor %}
+
+
+            <div class="nav-controls">
+
+                {% if i > 0 %}
+                <a href="{{ url_for('viewer', i=i-1) }}">
+                    <button type="button" class="btn-arrow">&lt;</button>
+                </a>
+                {% else %}
+                <button type="button" class="btn-arrow" disabled style="opacity: 0.3;">&lt;</button>
+                {% endif %}
+
+                <button type="submit" class="btn-submit-main">
+                    {% if i == total - 1 %}
+                    Save & Submit
+                    {% else %}
+                    {% if data_list[i].get('submitted') %} Update {% else %} Save {% endif %}
+                    {% endif %}
+                </button>
+
+                {% if i != total-1 %}
+                <a href="{{ url_for('viewer', i=i+1) }}">
+                    <button type="button" class="btn-arrow">&gt;</button>
+                </a>
+                {% else %}
+                <button type="button" class="btn-arrow" disabled style="opacity: 0.3;">&gt;</button>
+                {% endif %}
+
+            </div>
+        </form>
+
+        <br><br><br>
+    </div>
+
+</body>
+
+</html>

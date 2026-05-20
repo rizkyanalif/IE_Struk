@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Data Extractor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 60%;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #1e40af;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Progress Bar Styles */
+        #progress-wrapper-folder,
+        #progress-wrapper-path {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .progress-container {
+            width: 100%;
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        #progress-bar-folder,
+        #progress-bar-path {
+            width: 0%;
+            height: 100%;
+            background: #22c55e;
+            transition: width 0.3s ease;
+        }
+
+        .status-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #475569;
+            font-weight: bold;
+        }
+
+        #path-input,
+        #extra-prompt {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        #extra-prompt {
+            resize: vertical;
+        }
+
+        #error-message p {
+            color: red;
+            text-align: center;
+            background: #fee2e2;
+            padding: 10px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Data Extractor</h2>
+
+        <label for="extra-prompt">Prompt Tambahan (Opsional):</label>
+        <textarea type="text" id="extra-prompt" name="additional_prompt_input"
+            ></textarea>
+
+        <div id="error-message">
+            {% if text %}
+            <p>{{ text }}</p>
+            {% endif %}
+        </div>
+
+        <!-- UPLOAD SINGLE FILE -->
+
+        <div>
+            <input type="file" name="file" id="fileInput" accept=".pdf" required>
+            <button type="button" id="file-upload" onclick="processFile()">Upload File & Extract</button>
+            </form>
+
+            <div style="text-align: center; margin: 15px 0; color: #94a3b8;">— ATAU —</div>
+
+            <!-- UPLOAD BULK IN FOLDER -->
+
+            <div id="folder-section">
+                <input type="file" id="folderInput" webkitdirectory directory multiple required>
+                <button type="button" id="folder-upload" onclick="processFolder()">Upload Folder & Extract</button>
+            </div>
+
+            <div id="progress-wrapper-folder">
+                <div class="status-info">
+                    <span id="status-text-folder">Menyiapkan...</span>
+                    <span id="percent-text-folder">0%</span>
+                </div>
+                <div class="progress-container">
+                    <div id="progress-bar-folder"></div>
+                </div>
+                <p id="file-name-display-folder"
+                    style="font-size: 12px; color: #64748b; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                </p>
+            </div>
+
+            <div style="text-align: center; margin: 15px 0; color: #94a3b8;">— ATAU —</div>
+
+            <!-- INPUT FOLDER / FILE PATH -->
+            <div id="text-section">
+                <input type="text" name="path_input" id="path-input" required placeholder="Enter File/Folder Path Here"
+                    value="{{ path if path else '' }}" oninput="clearError()">
+                <button type="button" id="path-upload" onclick="processPath()">Input Folder/File Path & Extract</button>
+            </div>
+
+            <div id="progress-wrapper-path">
+                <div class="status-info">
+                    <span id="status-text-path">Menyiapkan...</span>
+                    <span id="percent-text-path">0%</span>
+                </div>
+                <div class="progress-container">
+                    <div id="progress-bar-path"></div>
+                </div>
+                <p id="file-name-display-path"
+                    style="font-size: 12px; color: #64748b; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                </p>
+            </div>
+
+        </div>
+
+        <script>
+            async function processFile() {
+                const errorDiv = document.getElementById('error-message');
+                if (errorDiv) {
+                    errorDiv.innerHTML = '';
+                }
+                await fetch('/reset_folder', { method: 'POST' });
+                const fileBtn = document.getElementById('file-upload')
+                const folderBtn = document.getElementById('folder-upload');
+                const pathBtn = document.getElementById('path-upload');
+                const fileInput = document.getElementById('fileInput')
+                const file = fileInput.files[0];
+
+
+                if (!file) {
+                    alert("Silakan pilih file dokumen");
+                    return;
+                }
+
+                fileBtn.disabled = true;
+                folderBtn.disabled = true;
+                pathBtn.disabled = true;
+
+                fileBtn.innerText = 'Processing...';
+
+                const additionalPrompt = document.getElementById('extra-prompt').value;
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('prompt', additionalPrompt);
+
+                try {
+                    const response = await fetch('/upload_single', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        // 4. Selesai, arahkan ke viewer
+                        window.location.href = "/viewer/0";
+                    } else {
+                        const errData = await response.json();
+                        alert("Error: " + errData.error);
+                        resetUI();
+                    }
+                } catch (err) {
+                    console.error("Gagal memproses file:", file.name);
+                }
+            }
+
+            async function processFolder() {
+                const fileInput = document.getElementById('folderInput');
+                const files = fileInput.files;
+                const errorDiv = document.getElementById('error-message');
+                if (errorDiv) {
+                    errorDiv.innerHTML = '';
+                }
+
+                if (files.length === 0) {
+                    alert("Silakan pilih folder berisi dokumen");
+                    return;
+                }
+
+                // 1. Reset data lama di server
+                await fetch('/reset_folder', { method: 'POST' });
+
+                // 2. Siapkan UI
+                const fileBtn = document.getElementById('file-upload')
+                const folderBtn = document.getElementById('folder-upload');
+                const pathBtn = document.getElementById('path-upload');
+                const wrapper = document.getElementById('progress-wrapper-folder');
+                const progressBar = document.getElementById('progress-bar-folder');
+                const statusText = document.getElementById('status-text-folder');
+                const percentText = document.getElementById('percent-text-folder');
+                const fileNameDisplay = document.getElementById('file-name-display-folder');
+                const additionalPrompt = document.getElementById('extra-prompt').value;
+
+                fileBtn.disabled = true;
+                folderBtn.disabled = true;
+                pathBtn.disabled = true;
+                folderBtn.innerText = 'Processing...';
+                wrapper.style.display = 'block';
+
+                const sortedFiles = Array.from(files).sort((a, b) => {
+                    return a.name.localeCompare(b.name, undefined, {
+                        numeric: true,
+                        sensitivity: 'base'
+                    });
+                });
+
+                const totalFiles = sortedFiles.length;
+
+                // 3. Loop kirim file satu per satu
+                for (let i = 0; i < totalFiles; i++) {
+                    const formData = new FormData();
+                    formData.append('file', sortedFiles[i]);
+                    formData.append('prompt', additionalPrompt);
+
+
+                    fileNameDisplay.innerText = `Memproses: ${sortedFiles[i].name}`;
+
+                    try {
+                        const response = await fetch('/upload_single', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            // Update progress: (index / total) * 100
+                            const currentIdx = i + 1;
+                            const progress = Math.round((currentIdx / totalFiles) * 100);
+
+                            progressBar.style.width = progress + '%';
+                            percentText.innerText = progress + '%';
+                            statusText.innerText = `File ${currentIdx} dari ${totalFiles}`;
+                        }
+                    } catch (err) {
+                        console.error("Gagal memproses file:", sortedFiles[i].name);
+                    }
+                }
+
+                // 4. Selesai, pindah ke viewer
+                statusText.innerText = "Selesai! Mengalihkan...";
+                setTimeout(() => {
+                    window.location.href = "/viewer/0";
+                }, 800);
+            }
+
+            function clearError() {
+                const errorDiv = document.getElementById('error-message');
+                if (errorDiv) {
+                    errorDiv.innerHTML = '';
+                }
+            }
+
+            async function processPath() {
+                const pathInput = document.getElementById('path-input');
+                const pathValue = pathInput.value.trim();
+                const errorDiv = document.getElementById('error-message');
+                const additionalPrompt = document.getElementById('extra-prompt').value;
+
+                if (!pathValue) {
+                    alert("Silakan masukkan path folder atau file!");
+                    return;
+                }
+
+                if (errorDiv) errorDiv.innerHTML = '';
+
+                // 1. Reset data lama di server
+                await fetch('/reset_folder', { method: 'POST' });
+                // 2. Siapkan UI Progress Bar
+                const fileBtn = document.getElementById('file-upload');
+                const folderBtn = document.getElementById('folder-upload');
+                const pathBtn = document.getElementById('path-upload');
+                const wrapper = document.getElementById('progress-wrapper-path');
+                const progressBar = document.getElementById('progress-bar-path');
+                const statusText = document.getElementById('status-text-path');
+                const percentText = document.getElementById('percent-text-path');
+                const fileNameDisplay = document.getElementById('file-name-display-path');
+
+                fileBtn.disabled = true;
+                folderBtn.disabled = true;
+                pathBtn.disabled = true;
+                wrapper.style.display = 'block';
+
+                try {
+
+                    // 3. Ambil daftar file dari path tersebut terlebih dahulu
+                    // Kita butuh route baru atau modifikasi route untuk mendapatkan list file saja
+                    const response = await fetch('/get_files_in_path', {
+                        method: 'POST',
+                        body: new URLSearchParams({ 'path': pathValue })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.error) {
+                        if (errorDiv) {
+                            errorDiv.innerHTML = `<p>${result.error}: ${pathValue}</p>`;
+                        }
+                        pathBtn.disabled = false;
+                        folderBtn.disabled = false;
+                        fileBtn.disabled = false;
+                        wrapper.style.display = 'none';
+                        return;
+                    }
+
+                    const files = result.files; // Daftar nama file/path lengkap
+                    const totalFiles = files.length;
+                    pathBtn.innerText = 'Processing...';
+
+                    // 4. Loop kirim path file satu per satu ke server untuk diproses
+                    for (let i = 0; i < totalFiles; i++) {
+                        fileNameDisplay.innerText = `Memproses: ${files[i]}`;
+
+                        const procRes = await fetch('/process_single_path', {
+                            method: 'POST',
+                            body: new URLSearchParams({
+                                'file_path': files[i],
+                                'prompt': additionalPrompt
+                            })
+                        });
+
+                        if (procRes.ok) {
+                            const currentIdx = i + 1;
+                            const progress = Math.round((currentIdx / totalFiles) * 100);
+
+                            progressBar.style.width = progress + '%';
+                            percentText.innerText = progress + '%';
+                            statusText.innerText = `File ${currentIdx} dari ${totalFiles}`;
+                        }
+                    }
+
+                    // 5. Selesai
+                    statusText.innerText = "Selesai! Mengalihkan...";
+                    setTimeout(() => {
+                        window.location.href = "/viewer/0";
+                    }, 800);
+
+                } catch (err) {
+                    console.error("Gagal:", err);
+                    alert("Terjadi kesalahan saat memproses path.");
+                    pathBtn.disabled = false;
+                    folderBtn.disabled = false;
+                    fileBtn.disabled = false;
+                }
+            }
+        </script>
+</body>
+
+</html>
