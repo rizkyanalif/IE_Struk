@@ -153,8 +153,8 @@ def upload_single():
     
     return jsonify({"status": "success"})
 
-@app.route("/submit_folder", methods=["POST"])
-def submit_folder():
+@app.route("/submit", methods=["POST"])
+def submit():
     global data_list, validated_data
 
     # form_data = request.form.to_dict()
