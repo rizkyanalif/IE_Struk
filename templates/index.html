@@ -116,8 +116,7 @@
         <h2>Data Extractor</h2>
 
         <label for="extra-prompt">Prompt Tambahan (Opsional):</label>
-        <textarea type="text" id="extra-prompt" name="additional_prompt_input"
-            ></textarea>
+        <textarea type="text" id="extra-prompt" name="additional_prompt_input"></textarea>
 
         <div id="error-message">
             {% if text %}
@@ -128,7 +127,7 @@
         <!-- UPLOAD SINGLE FILE -->
 
         <div>
-            <input type="file" name="file" id="fileInput" accept=".pdf" required>
+            <input type="file" name="file" id="fileInput" accept=".pdf, .jpg, .jpeg, .png" required>
             <button type="button" id="file-upload" onclick="processFile()">Upload File & Extract</button>
             </form>
 

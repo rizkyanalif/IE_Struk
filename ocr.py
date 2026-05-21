@@ -27,10 +27,12 @@ Tugas Anda membaca dokumen gambar / PDF yang diunggah user, memahami isi dokumen
 3. Jika field tidak ditemukan, isi null.
 4. Nilai nominal wajib angka tanpa simbol mata uang.
 5. Hilangkan spasi berlebih.
+6. Ekstrak semua struk yang terlihat kedalam JSON.
 
 ### ATURAN KHUSUS:
-*item_price adalah harga satuan dari sebuah item
-*subtotal dari Item adalah item_price * quantity
+* Reasoning WAJIB
+* item_price adalah harga satuan dari sebuah item
+* subtotal dari Item adalah item_price * quantity
 """
 
 data_list = []
@@ -41,20 +43,24 @@ def index():
     return render_template("index.html", text=None, path=None)
 
 class Item(BaseModel):
-      item_name: str
-      item_price: int
-      quantity: int
-      subtotal: int
+      item_name: str | None
+      item_price: int | None
+      quantity: int | None
+      subtotal: int | None
 
-class Struk(BaseModel):
-      store_name: str
-      transaction_date: str
-      receipt_no: str
-      item: List[Item]
-      description: str
-      total_paid: int
+class Receipts(BaseModel):
+      store_name: str | None
+      transaction_date: str | None
+      receipt_no: str | None
+      items: List[Item] | None
+      description: str | None
+      total_paid: int | None
 
-class Output(RootModel[List[Struk]]):
+# class Output(BaseModel):
+#     Receipts: List[Receipts]
+#     alasan_kenapa_cuma_extract_3_struk_padahal_di_gambar_ada_5_struk: str
+
+class Output(RootModel[List[Receipts]]):
       pass
 
 labels = {
@@ -69,43 +75,72 @@ labels = {
     'total_paid': 'Harga Total',
 }
 
-def extract_info(input, additional_prompt=""):
+def extract_info(input, file_ext, additional_prompt=""):
     client = OpenAI(
         base_url=BASE_URL,
         api_key=API_KEY
     )
     content=[]
+    content.append({"type": "text", "text": "Extract dokumen berikut"})
     final_prompt = PROMPT
     if(additional_prompt):
         print(f'##############################################################################################################\n{additional_prompt}\n##############################################################################################################')
         final_prompt += "\n\n### INSTRUKSI TAMBAHAN (PRIORITAS TERTINGGI - TIMPA ATURAN LAIN JIKA BERTENTANGAN):\n" + additional_prompt
-    content.append({"type": "text", "text": "Extract dokumen berikut"})
     try:
         if isinstance(input, bytes):
-            doc = fitz.open(stream=input, filetype="pdf")
+            if file_ext == 'pdf':
+                doc = fitz.open(stream=input, filetype="pdf")
+                for page in doc:
+                    pix = page.get_pixmap(dpi=150)
+                    img_bytes = pix.tobytes("png")
+                    
+                    # Encode the image bytes to base64 string
+                    base64_image = base64.b64encode(img_bytes).decode('utf-8')
+                    
+                    # Add to the content list in OpenAI format
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{base64_image}"
+                        }
+                    })
+                doc.close()
+            elif file_ext in ['png', 'jpg', 'jpeg']:
+                base64_image = base64.b64encode(input).decode('utf-8')
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/{file_ext};base64,{base64_image}"}
+                })
         elif isinstance(input, str):
             if not os.path.exists(input):
                 raise FileNotFoundError(f"File tidak ditemukan: {input}")
-            doc = fitz.open(input)
+            if file_ext == 'pdf':
+                doc = fitz.open(stream=input)
+                for page in doc:
+                    pix = page.get_pixmap(dpi=150)
+                    img_bytes = pix.tobytes("png")
+                    
+                    # Encode the image bytes to base64 string
+                    base64_image = base64.b64encode(img_bytes).decode('utf-8')
+                    
+                    # Add to the content list in OpenAI format
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{base64_image}"
+                        }
+                    })
+                doc.close()
+            elif file_ext in ['png', 'jpg', 'jpeg']:
+                with open(input, 'rb') as img_file:
+                    base64_image = base64.b64encode(img_file.read()).decode('utf-8')
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/{file_ext};base64,{base64_image}"}
+                })
         else:
             raise ValueError("Input harus berupa file / path")
     finally:
-        if doc:
-            for page in doc:
-                pix = page.get_pixmap(dpi=150)
-                img_bytes = pix.tobytes("png")
-                
-                # Encode the image bytes to base64 string
-                base64_image = base64.b64encode(img_bytes).decode('utf-8')
-                
-                # Add to the content list in OpenAI format
-                content.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/png;base64,{base64_image}"
-                    }
-                })
-            doc.close()
             response = client.beta.chat.completions.parse(
                 model=MODEL,
                 messages=[
@@ -121,10 +156,10 @@ def extract_info(input, additional_prompt=""):
                 temperature=0,
                 response_format=Output,
             )
+            print(response.choices[0].message.content)
             data = json.loads(response.choices[0].message.content)
             
 
-            print(response.choices[0].message.content)
             print(additional_prompt)
             return data
 
@@ -140,8 +175,11 @@ def upload_single():
     file_ext = file.filename.lower().split('.')[-1]
     file_bytes = file.read()
     
-    if file_ext == 'pdf':
-        data = extract_info(file_bytes, add_prompt)
+    if file_ext in ['pdf', 'png', 'jpeg', 'jpg']:
+        try:
+            data = extract_info(file_bytes, file_ext, add_prompt)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
     else:
         return jsonify({"error": "Unsupported file type"}), 400
 
@@ -188,7 +226,7 @@ def submit():
         "store_name": store_name,
         "transaction_date": transaction_date,
         "receipt_no": receipt_no,
-        "item": reconstructed_items,
+        "items": reconstructed_items,
         "description": description,
         "total_paid": int(total_paid) if total_paid.isdigit() else 0
     }
@@ -215,7 +253,7 @@ def get_files_in_path():
     files_to_process = []
     
     if os.path.isfile(path):
-        if path.lower().endswith('.pdf'):
+        if path.lower().endswith(('.pdf', '.png', 'jpeg', 'jpg')):
             files_to_process.append(path)
     elif os.path.isdir(path):
         all_files = os.listdir(path)
@@ -227,11 +265,11 @@ def get_files_in_path():
         all_files = sorted(all_files, key=extract_number)
         
         for f in all_files:
-            if f.lower().endswith('.pdf'):
+            if f.lower().endswith(('.pdf', '.png', 'jpeg', 'jpg')):
                 files_to_process.append(os.path.join(path, f))
                 
     if not files_to_process:
-        return jsonify({"error": "Tidak ada file PDF yang valid"}), 400
+        return jsonify({"error": "Tidak ada file PDF atau PNG/JPG yang valid"}), 400
         
     return jsonify({"files": files_to_process})
 
@@ -242,17 +280,19 @@ def process_single_path():
     file_path = request.form.get('file_path')
     add_prompt = request.form.get('prompt')
 
+    file_ext = file_path.lower().split('.')[-1]
+
     try:
-        if file_path.lower().endswith('.pdf'):
+        if file_path.lower().endswith(('.pdf', 'png', 'jpeg', 'jpg')):
             with open(file_path, 'rb') as f:
                 file_bytes = f.read()
-            data = extract_info(file_bytes, add_prompt)
+            data = extract_info(file_bytes, file_ext, add_prompt)
         else: #kalo tipe datanya bisa beberapa
             None
         for item in data:
             data_list.append({
                 'file_name': os.path.basename(file_path),
-                'data': data
+                'data': item
             })
         return jsonify({"status": "success"})
     except Exception as e:

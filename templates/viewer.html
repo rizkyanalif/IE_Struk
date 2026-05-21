@@ -61,12 +61,25 @@
             margin-top: 20px;
         }
 
-        input,
+        .container>form>input,
         select {
             width: 100%;
             padding: 12px;
             border-radius: 6px;
             font-size: 16px;
+        }
+
+        /* Tambahkan rule baru ini khusus untuk merapikan input di dalam tabel */
+        #tabel-item input,
+        #tabel-item-baru input {
+            width: 100%;
+            box-sizing: border-box;
+            /* Memastikan padding tidak merusak lebar elemen */
+            padding: 6px 10px;
+            /* Ukuran padding yang lebih proporsional untuk tabel */
+            font-size: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
         }
 
         .ktp {
@@ -186,32 +199,27 @@
 
 <script>
     function tambahBaris() {
-        // Ambil elemen tbody berdasarkan ID
         const tbody = document.getElementById('tabel-item');
-
-        // #30b35c  // Buat element baris baru (tr)
         const row = document.createElement('tr');
 
-        // Masukkan struktur input ke dalam baris baru tersebut
         row.innerHTML = `
-                <td style="padding: 6px; border: 1px solid #cbd5e1;">
-                    <input type="text" name="item_name[]" value="" style="padding: 6px;" placeholder="Nama produk baru...">
-                </td>
-                <td style="padding: 6px; border: 1px solid #cbd5e1;">
-                    <input type="number" name="item_price[]" value="0" style="padding: 6px;">
-                </td>
-                <td style="padding: 6px; border: 1px solid #cbd5e1;">
-                    <input type="number" name="item_qty[]" value="1" style="padding: 6px;">
-                </td>
-                <td style="padding: 6px; border: 1px solid #cbd5e1;">
-                    <input type="number" name="item_subtotal[]" value="0" style="padding: 6px;">
-                </td>
-                <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">
-                    <button type="button" onclick="hapusBaris(this)" style="background: #dc2626; padding: 6px 10px; width: auto; font-size: 12px;">X</button>
-                </td>
-            `;
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">
+                <input type="text" name="item_name[]" value="" placeholder="Nama produk baru...">
+            </td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">
+                <input type="number" name="item_price[]" value="0">
+            </td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">
+                <input type="number" name="item_qty[]" value="1">
+            </td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1;">
+                <input type="number" name="item_subtotal[]" value="0">
+            </td>
+            <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">
+                <button type="button" onclick="hapusBaris(this)" style="background: #dc2626; padding: 6px 10px; width: auto; font-size: 12px;">X</button>
+            </td>
+        `;
 
-        // Masukkan baris baru ke dalam tabel
         tbody.appendChild(row);
     }
 
@@ -229,7 +237,7 @@
 <body>
 
     <div class="navigation-grid">
-        <h3>Daftar Dokumen</h3>
+        <h3>Daftar Struk</h3>
         <div class="grid-container">
             {% for idx in range(total) %}
             <a href="{{ url_for('viewer', i=idx) }}"
@@ -258,7 +266,7 @@
 
             {% for key, value in img.data.items() if 'raw' not in key %}
 
-            {% if key == 'item' and value is iterable and value is not string %}
+            {% if key == 'items' and value is iterable and value is not string %}
             <br>
             <label><strong>Daftar Item Belanjaan:</strong></label>
             <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
@@ -311,7 +319,7 @@
 
             {# JIKA DATA BIASA (String / Angka) #}
             {% else %}
-            <label>{{ labels[key] }}:</label><br>
+            <label>{{ labels[key] if labels[key] else key }}:</label><br>
             <input type="text" value="{{ value }}" name="{{ key }}">
             <br><br>
             {% endif %}
