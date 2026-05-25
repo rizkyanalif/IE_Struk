@@ -27,10 +27,11 @@ Tugas Anda membaca dokumen gambar / PDF yang diunggah user, memahami isi dokumen
 3. Jika field tidak ditemukan, isi null.
 4. Nilai nominal wajib angka tanpa simbol mata uang.
 5. Hilangkan spasi berlebih.
-6. Ekstrak semua struk yang terlihat kedalam JSON.
+6. Hanya ekstrak semua struk yang terlihat di dalam dokumen
 
 ### ATURAN KHUSUS:
-* Reasoning WAJIB
+* reasoning: pikirkan baik baik untuk setiap field data yang akan anda isi
+* transaction_date harus dalam format DD-MM-YYYY, tanggal sudah berbentuk "tanggal-bulan-tahun" tugas anda hanyalah menstandarisasi menjadi format DD-MM-YYYY
 * item_price adalah harga satuan dari sebuah item
 * subtotal dari Item adalah item_price * quantity
 """
@@ -49,7 +50,7 @@ class Item(BaseModel):
       subtotal: int | None
 
 class Receipts(BaseModel):
-    #   reasoning: str | None
+      reasoning: str | None
       store_name: str | None
       transaction_date: str | None
       receipt_no: str | None
