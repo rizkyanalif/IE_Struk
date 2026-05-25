@@ -17,22 +17,21 @@ BASE_URL = os.getenv("BASE_URL")
 API_KEY = os.getenv("API_KEY")
 MODEL = os.getenv("MODEL")
 PROMPT = """
-Anda adalah AI Vision Document Extractor untuk sistem enterprise.
+You are an Enterprise AI Vision Document Extractor.
 
-Tugas Anda membaca dokumen gambar / PDF yang diunggah user, memahami isi dokumen, lalu mengekstrak data terstruktur agar dapat otomatis mengisi form page.
+Your task is to read the image or PDF document uploaded by the user, comprehend its content, and extract structured data to automatically populate form fields.
 
-### ATURAN UMUM:
-1. Fokus hanya pada teks yang terlihat pada dokumen.
-2. Jangan mengarang data, kecuali jika ada instruksi khusus dari user untuk mengisi field tertentu dengan nilai spesifik.
-3. Jika field tidak ditemukan, isi null.
-4. Nilai nominal wajib angka tanpa simbol mata uang.
-5. Hilangkan spasi berlebih.
+### GENERAL RULES:
+1. Focus exclusively on the text visibly present in the document.
+2. Do not hallucinate or fabricate data, unless explicitly instructed by the user to populate a specific field with a predefined value.
+3. If a field is not found in the document, return null.
+4. Nominal/currency values must be extracted as pure numbers without any currency symbols (e.g., return 15000 instead of Rp15.000 or $15).
+5. Remove any leading, trailing, or excessive whitespace.
 
-### ATURAN KHUSUS:
-* reasoning: pikirkan baik baik untuk setiap field data yang akan anda isi
-* transaction_date harus dalam format DD-MM-YYYY
-* item_price adalah harga satuan dari sebuah item
-* subtotal dari Item adalah item_price * quantity
+### SPECIFIC RULES:
+* reasoning: Think step-by-step and provide your rationale for each data field you extract before outputting the final value.
+* transaction_date: Must be formatted strictly as DD-MM-YYYY. The source date is already in a "day-month-year" structure; your only task is to standardize it into the DD-MM-YYYY format.
+* item_price: This represents the unit price of a single item.
 """
 
 data_list = []
@@ -151,6 +150,7 @@ def extract_info(input, file_ext, additional_prompt=""):
         temperature=0,
         response_format=Receipts,
     )
+
     print(response.choices[0].message.content)
     data = json.loads(response.choices[0].message.content)
     
