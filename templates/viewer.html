@@ -203,24 +203,32 @@
         const row = document.createElement('tr');
 
         row.innerHTML = `
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">
-                <input type="text" name="item_name[]" value="" placeholder="Nama produk baru...">
-            </td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">
-                <input type="number" name="item_price[]" value="0">
-            </td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">
-                <input type="number" name="item_qty[]" value="1">
-            </td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">
-                <input type="number" name="item_subtotal[]" value="0">
-            </td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">
-                <button type="button" onclick="hapusBaris(this)" style="background: #dc2626; padding: 6px 10px; width: auto; font-size: 12px;">X</button>
-            </td>
-        `;
+        <td style="padding: 8px; border: 1px solid #cbd5e1;">
+            <input type="text" name="item_name[]" value="" placeholder="Nama produk baru...">
+        </td>
+        <td style="padding: 8px; border: 1px solid #cbd5e1;">
+            <input type="text" name="item_price[]" value="0" class="format-duit">
+        </td>
+        <td style="padding: 8px; border: 1px solid #cbd5e1;">
+            <input type="text" name="item_qty[]" value="1" class="format-duit">
+        </td>
+        <td style="padding: 8px; border: 1px solid #cbd5e1;">
+            <input type="text" name="item_subtotal[]" value="0" class="format-duit">
+        </td>
+        <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: center;">
+            <button type="button" onclick="hapusBaris(this)" style="background: #dc2626; padding: 6px 10px; width: auto; font-size: 12px;">X</button>
+        </td>
+    `;
 
         tbody.appendChild(row);
+
+        // Daftarkan event listener input ke elemen baru yang barusan dibuat
+        row.querySelectorAll('.format-duit').forEach(input => {
+            input.value = formatRupiah(input.value);
+            input.addEventListener('input', function (e) {
+                e.target.value = formatRupiah(e.target.value);
+            });
+        });
     }
 
     function hapusBaris(button) {
@@ -232,6 +240,40 @@
             row.remove();
         }
     }
+
+    function formatRupiah(angka) {
+        if (!angka && angka !== 0) return '';
+        let nomorString = angka.toString().replace(/[^0-9]/g, ''); // Ambil angka saja
+        return nomorString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    }
+
+    // Fungsi untuk membersihkan titik sebelum dikirim ke backend (10.000 -> 10000)
+    function unformatRupiah(teks) {
+        return teks.replace(/\./g, '');
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const inputDuits = document.querySelectorAll('.format-duit');
+
+        // 1. Format semua data angka saat pertama kali halaman dimuat
+        inputDuits.forEach(input => {
+            input.value = formatRupiah(input.value);
+
+            // 2. Format otomatis secara real-time saat user sedang mengetik
+            input.addEventListener('input', function (e) {
+                e.target.value = formatRupiah(e.target.value);
+            });
+        });
+
+        // 3. SEBELUM FORM SUBMIT: Bersihkan titik agar backend ocr.py Anda tidak error/crash
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function () {
+            const inputToClean = document.querySelectorAll('.format-duit');
+            inputToClean.forEach(input => {
+                input.value = unformatRupiah(input.value);
+            });
+        });
+    });
 </script>
 
 <body>
@@ -267,6 +309,7 @@
             {% for key, value in img.data.items() if 'raw' not in key %}
 
             {% if key == 'items' and value is iterable and value is not string %}
+            <input type="hidden" name="items" value="">
             <br>
             <label><strong>Daftar Item Belanjaan:</strong></label>
             <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
@@ -287,14 +330,15 @@
                             <input type="text" name="item_name[]" value="{{ produk.item_name }}" style="padding: 6px;">
                         </td>
                         <td style="padding: 6px; border: 1px solid #cbd5e1;">
-                            <input type="number" name="item_price[]" value="{{ produk.item_price }}"
+                            <input type="text" class="format-duit" name="item_price[]" value="{{ produk.item_price }}"
                                 style="padding: 6px;">
                         </td>
                         <td style="padding: 6px; border: 1px solid #cbd5e1;">
-                            <input type="number" name="item_qty[]" value="{{ produk.quantity }}" style="padding: 6px;">
+                            <input type="text" class="format-duit" name="item_qty[]" value="{{ produk.quantity }}"
+                                style="padding: 6px;">
                         </td>
                         <td style="padding: 6px; border: 1px solid #cbd5e1;">
-                            <input type="number" name="item_subtotal[]" value="{{ produk.subtotal }}"
+                            <input type="text" class="format-duit" name="item_subtotal[]" value="{{ produk.subtotal }}"
                                 style="padding: 6px;">
                         </td>
                         <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center;">
@@ -320,7 +364,8 @@
             {# JIKA DATA BIASA (String / Angka) #}
             {% else %}
             <label>{{ labels[key] if labels[key] else key }}:</label><br>
-            <input type="text" value="{{ value }}" name="{{ key }}">
+            <input type="text" value="{{ value }}" name="{{ key }}" {% if key=='total_paid' %} class="format-duit"
+                {% endif %}>
             <br><br>
             {% endif %}
 
