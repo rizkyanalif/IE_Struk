@@ -49,16 +49,13 @@ class Item(BaseModel):
       subtotal: int | None
 
 class Receipts(BaseModel):
+    #   reasoning: str | None
       store_name: str | None
       transaction_date: str | None
       receipt_no: str | None
       items: List[Item] | None
       description: str | None
       total_paid: int | None
-
-# class Output(BaseModel):
-#     Receipts: List[Receipts]
-#     alasan_kenapa_cuma_extract_3_struk_padahal_di_gambar_ada_5_struk: str
 
 class Output(RootModel[List[Receipts]]):
       pass
@@ -115,7 +112,7 @@ def extract_info(input, file_ext, additional_prompt=""):
             if not os.path.exists(input):
                 raise FileNotFoundError(f"File tidak ditemukan: {input}")
             if file_ext == 'pdf':
-                doc = fitz.open(stream=input)
+                doc = fitz.open(input)
                 for page in doc:
                     pix = page.get_pixmap(dpi=150)
                     img_bytes = pix.tobytes("png")
@@ -141,27 +138,28 @@ def extract_info(input, file_ext, additional_prompt=""):
         else:
             raise ValueError("Input harus berupa file / path")
     finally:
-            response = client.beta.chat.completions.parse(
-                model=MODEL,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": final_prompt,
-                    },
-                    {
-                        "role": "user",
-                        "content": content,
-                    }
-                ],
-                temperature=0,
-                response_format=Output,
-            )
-            print(response.choices[0].message.content)
-            data = json.loads(response.choices[0].message.content)
-            
+        None
+    response = client.beta.chat.completions.parse(
+        model=MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": final_prompt,
+            },
+            {
+                "role": "user",
+                "content": content,
+            }
+        ],
+        temperature=0,
+        response_format=Output,
+    )
+    print(response.choices[0].message.content)
+    data = json.loads(response.choices[0].message.content)
+    
 
-            print(additional_prompt)
-            return data
+    print(additional_prompt)
+    return data
 
 
 @app.route("/upload_single", methods=["POST"])
@@ -195,46 +193,45 @@ def upload_single():
 def submit():
     global data_list, validated_data
 
-    # form_data = request.form.to_dict()
-    # i = int(form_data.pop("index"))
+    form_data = {key: value for key, value in request.form.items() if not key.endswith('[]')}
+    i = int(form_data.pop("index"))
 ##################
-    i = int(request.form.get('index'))
-    
-    store_name = request.form.get('store_name')
-    transaction_date = request.form.get('transaction_date')
-    receipt_no = request.form.get('receipt_no')
-    description = request.form.get('description')
-    total_paid = request.form.get('total_paid')
-    
     names = request.form.getlist('item_name[]')
     prices = request.form.getlist('item_price[]')
     qtys = request.form.getlist('item_qty[]')
     subtotals = request.form.getlist('item_subtotal[]')
-    
-    # 3. Rekonstruksi kembali menjadi format JSON asal kamu
-    reconstructed_items = []
+
+    item_list = []
     for idx in range(len(names)):
-        reconstructed_items.append({
+        item_list.append({
             "item_name": names[idx],
             "item_price": int(prices[idx]) if prices[idx].isdigit() else 0,
             "quantity": int(qtys[idx]) if qtys[idx].isdigit() else 0,
             "subtotal": int(subtotals[idx]) if subtotals[idx].isdigit() else 0
         })
-        
-    # 4. Satukan ke struktur data utama
-    updated_data = {
-        "store_name": store_name,
-        "transaction_date": transaction_date,
-        "receipt_no": receipt_no,
-        "items": reconstructed_items,
-        "description": description,
-        "total_paid": int(total_paid) if total_paid.isdigit() else 0
-    }
+    
+    form_data['items'] = item_list
+    form_data['total_paid'] = int(form_data['total_paid'])
+    
+    # # 4. Satukan ke struktur data utama
+    # updated_data = {
+    #     "store_name": store_name,
+    #     "transaction_date": transaction_date,
+    #     "receipt_no": receipt_no,
+    #     "items": reconstructed_items,
+    #     "description": description,
+    #     "total_paid": int(total_paid) if total_paid.isdigit() else 0
+    # }
 ##################
     if i < len(data_list):
         data_list[i]['submitted'] = True
-    upper_data = {k: v for k,v in updated_data.items()} # v.upper untuk capital
+    upper_data = {k: v for k,v in form_data.items()} # v.upper untuk capital
     validated_data[i] = upper_data
+    
+    # if i < len(data_list):
+    #     data_list[i]['submitted'] = True
+    # upper_data = {k: v for k,v in updated_data.items()} # v.upper untuk capital
+    # validated_data[i] = upper_data
 
     if i==len(data_list)-1:
         response = [validated_data[k] for k in sorted(validated_data.keys())]
