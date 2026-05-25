@@ -3,7 +3,7 @@ import os
 import fitz
 import base64
 from dotenv import load_dotenv
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel
 from openai import OpenAI
 import json
 import re
@@ -27,10 +27,10 @@ Tugas Anda membaca dokumen gambar / PDF yang diunggah user, memahami isi dokumen
 3. Jika field tidak ditemukan, isi null.
 4. Nilai nominal wajib angka tanpa simbol mata uang.
 5. Hilangkan spasi berlebih.
-6. Ekstrak semua struk yang terlihat kedalam JSON.
 
 ### ATURAN KHUSUS:
-* Reasoning WAJIB
+* reasoning: pikirkan baik baik untuk setiap field data yang akan anda isi
+* transaction_date harus dalam format DD-MM-YYYY
 * item_price adalah harga satuan dari sebuah item
 * subtotal dari Item adalah item_price * quantity
 """
@@ -49,16 +49,13 @@ class Item(BaseModel):
       subtotal: int | None
 
 class Receipts(BaseModel):
-    #   reasoning: str | None
+      reasoning: str | None
       store_name: str | None
       transaction_date: str | None
       receipt_no: str | None
       items: List[Item] | None
       description: str | None
       total_paid: int | None
-
-class Output(RootModel[List[Receipts]]):
-      pass
 
 labels = {
     'store_name': 'Nama Toko',
@@ -152,7 +149,7 @@ def extract_info(input, file_ext, additional_prompt=""):
             }
         ],
         temperature=0,
-        response_format=Output,
+        response_format=Receipts,
     )
     print(response.choices[0].message.content)
     data = json.loads(response.choices[0].message.content)
@@ -181,11 +178,10 @@ def upload_single():
     else:
         return jsonify({"error": "Unsupported file type"}), 400
 
-    for item in data:
-        data_list.append({
-                'file_name': os.path.basename(file.filename),
-                'data': item
-            })
+    data_list.append({
+            'file_name': os.path.basename(file.filename),
+            'data': data
+        })
     
     return jsonify({"status": "success"})
 
@@ -286,11 +282,10 @@ def process_single_path():
             data = extract_info(file_bytes, file_ext, add_prompt)
         else: #kalo tipe datanya bisa beberapa
             None
-        for item in data:
-            data_list.append({
-                'file_name': os.path.basename(file_path),
-                'data': item
-            })
+        data_list.append({
+            'file_name': os.path.basename(file_path),
+            'data': data
+        })
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
