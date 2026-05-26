@@ -27,13 +27,13 @@ Tugas Anda membaca dokumen gambar / PDF yang diunggah user, memahami isi dokumen
 3. Jika field tidak ditemukan, isi null.
 4. Nilai nominal wajib angka tanpa simbol mata uang.
 5. Hilangkan spasi berlebih.
-6. Hanya ekstrak semua struk yang ada di dalam dokumen
+6. Hanya ekstrak semua struk yang ada di dalam dokumen.
+7. Angka harga yang tertera di sebelah kanan setiap item adalah HARGA TOTAL (SUBTOTAL BARIS), BUKAN harga satuan (price_per_item).
 
 ### ATURAN KHUSUS:
-* reasoning: pikirkan baik baik untuk setiap field data yang akan anda isi
+* reasoning: Tuliskan langkah pemikiran (pikirkan dengan baik baik) untuk setiap field yang akan diisi
+* subtotal: Nilai asli yang tertera di struk untuk item tersebut.
 * transaction_date harus dalam format DD-MM-YYYY, tanggal sudah berbentuk "tanggal-bulan-tahun" tugas anda hanyalah menstandarisasi menjadi format DD-MM-YYYY
-* item_price adalah harga satuan dari sebuah item
-* subtotal dari Item adalah item_price * quantity
 """
 
 data_list = []
@@ -45,7 +45,6 @@ def index():
 
 class Item(BaseModel):
       item_name: str | None
-      item_price: int | None
       quantity: int | None
       subtotal: int | None
 
@@ -66,11 +65,10 @@ labels = {
     'transaction_date': 'Tanggal Transaksi',
     'receipt_no': 'Nomor Receipt',
     'item_name': 'Nama Item',
-    'item_price': 'Harga Item',
     'quantity': 'Jumlah',
     'subtotal': 'Subtotal',
     'description': 'Deskripsi',
-    'total_paid': 'Harga Total',
+    'total_price': 'Harga Total',
 }
 
 def extract_info(input, file_ext, additional_prompt=""):
@@ -187,6 +185,8 @@ def upload_single():
                 'file_name': os.path.basename(file.filename),
                 'data': item
             })
+        for barang in item['items']:
+            barang['price_per_item'] = int(barang['subtotal']/barang['quantity'])
     
     return jsonify({"status": "success"})
 
@@ -198,7 +198,7 @@ def submit():
     i = int(form_data.pop("index"))
 ##################
     names = request.form.getlist('item_name[]')
-    prices = request.form.getlist('item_price[]')
+    prices = request.form.getlist('price_per_item[]')
     qtys = request.form.getlist('item_qty[]')
     subtotals = request.form.getlist('item_subtotal[]')
 
@@ -206,13 +206,13 @@ def submit():
     for idx in range(len(names)):
         item_list.append({
             "item_name": names[idx],
-            "item_price": int(prices[idx]) if prices[idx].isdigit() else 0,
-            "quantity": int(qtys[idx]) if qtys[idx].isdigit() else 0,
+            "price_per_item": int(prices[idx]) if prices[idx].isdigit() else 0,
+            "quantity": int(qtys[idx]) if qtys[idx].isdigit() else 1,
             "subtotal": int(subtotals[idx]) if subtotals[idx].isdigit() else 0
         })
     
     form_data['items'] = item_list
-    form_data['total_paid'] = int(form_data['total_paid'])
+    form_data['total_price'] = int(form_data['total_price'])
     
     # # 4. Satukan ke struktur data utama
     # updated_data = {
@@ -221,7 +221,7 @@ def submit():
     #     "receipt_no": receipt_no,
     #     "items": reconstructed_items,
     #     "description": description,
-    #     "total_paid": int(total_paid) if total_paid.isdigit() else 0
+    #     "total_price": int(total_price) if total_price.isdigit() else 0
     # }
 ##################
     if i < len(data_list):
@@ -292,6 +292,8 @@ def process_single_path():
                 'file_name': os.path.basename(file_path),
                 'data': item
             })
+            for barang in item['items']:
+                barang['price_per_item'] = int(barang['subtotal']/barang['quantity'])
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
