@@ -27,7 +27,7 @@ Tugas Anda membaca dokumen gambar / PDF yang diunggah user, memahami isi dokumen
 3. Jika field tidak ditemukan, isi null.
 4. Nilai nominal wajib angka tanpa simbol mata uang.
 5. Hilangkan spasi berlebih.
-6. Hanya ekstrak semua struk yang terlihat di dalam dokumen
+6. Hanya ekstrak semua struk yang ada di dalam dokumen
 
 ### ATURAN KHUSUS:
 * reasoning: pikirkan baik baik untuk setiap field data yang akan anda isi
@@ -56,7 +56,7 @@ class Receipts(BaseModel):
       receipt_no: str | None
       items: List[Item] | None
       description: str | None
-      total_paid: int | None
+      total_price: int | None
 
 class Output(RootModel[List[Receipts]]):
       pass

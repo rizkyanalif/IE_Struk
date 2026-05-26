@@ -364,7 +364,7 @@
             {# JIKA DATA BIASA (String / Angka) #}
             {% else %}
             <label>{{ labels[key] if labels[key] else key }}:</label><br>
-            <input type="text" value="{{ value }}" name="{{ key }}" {% if key=='total_paid' %} class="format-duit"
+            <input type="text" value="{{ value }}" name="{{ key }}" {% if key=='total_price' %} class="format-duit"
                 {% endif %}>
             <br><br>
             {% endif %}
