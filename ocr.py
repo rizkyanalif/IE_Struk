@@ -31,7 +31,7 @@ Tugas Anda membaca dokumen gambar / PDF yang diunggah user, memahami isi dokumen
 7. Angka harga yang tertera di sebelah kanan setiap item adalah HARGA TOTAL (SUBTOTAL BARIS), BUKAN harga satuan (price_per_item).
 
 ### ATURAN KHUSUS:
-* reasoning: Tuliskan langkah pemikiran (pikirkan dengan baik baik) untuk setiap field yang akan diisi
+* reasoning: Tuliskan langkah pemikiran (pikirkan dengan baik baik) untuk semua field yang akan diisi
 * subtotal: Nilai asli yang tertera di struk untuk item tersebut.
 * transaction_date harus dalam format DD-MM-YYYY, tanggal sudah berbentuk "tanggal-bulan-tahun" tugas anda hanyalah menstandarisasi menjadi format DD-MM-YYYY
 """
