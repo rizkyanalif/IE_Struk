@@ -186,7 +186,10 @@ def upload_single():
                 'data': item
             })
         for barang in item['items']:
-            barang['price_per_item'] = int(barang['subtotal']/barang['quantity'])
+            if barang['subtotal'] and barang['quantity']:
+                barang['price_per_item'] = int(barang['subtotal']/barang['quantity'])
+            else:
+                barang['price_per_item'] = 0
     
     return jsonify({"status": "success"})
 
@@ -293,7 +296,10 @@ def process_single_path():
                 'data': item
             })
             for barang in item['items']:
-                barang['price_per_item'] = int(barang['subtotal']/barang['quantity'])
+                if barang['subtotal'] and barang['quantity']:
+                    barang['price_per_item'] = int(barang['subtotal']/barang['quantity'])
+                else:
+                    barang['price_per_item'] = 0
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
